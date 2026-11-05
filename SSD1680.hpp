@@ -12,7 +12,8 @@
 
 class SSD1680 {
 	public:
-		SSD1680(int scl, int sda, int cs, int dc, int rst, int bsy, int miso) {
+		SSD1680(uint8_t scl, uint8_t sda, uint8_t cs, uint8_t dc, uint8_t rst, uint8_t bsy, uint8_t miso
+				int width, int height) {
 			scl=scl; /* SPI */
 			sda=sda; /* SPI */
 			cs=cs; /* SPI */
@@ -20,6 +21,8 @@ class SSD1680 {
 			rst=rst; /* OUTPUT */
 			bsy=bsy; /* INPUT */
 			miso=miso; /* SPI (this is unused) */
+			width=width;
+			height=height;
 
 			pinMode(dc, OUTPUT);
 			pinMode(rst, OUTPUT);
@@ -32,7 +35,36 @@ class SSD1680 {
 
 			/* Refer to the operation flow section of SSD1680 manual*/
 			digitalWrite(rst, HIGH);
+			command(0x12); /*SW reset */
 			delay(10); /* force delay 10 ms*/
+
+			/* 3. Init Code */
+			command(0x01); /* Gate driver output */
+			/* Init All lines, aka 295 */
+			data((height-1) & 0xFF); /* A[7:0] */
+			data((height-1) >> 8); /* 0..A8 */
+			data(0x0); /* Use POR value*/
+
+			command(0x11);
+			data(0x3); /* A2 -> direction, default X*/
+						/* TODO: Orientation of screen ?*/
+
+			/* Ram X Bounds*/
+			command(0x44);
+			data(0x0); /* Start at 0 */
+			data((height>>3)-1); /* group by 8, divide by 8, same as bitshift 3*/
+
+			/* Ram Y Bounds*/
+			command(0x45);
+			data(0x0); /* Start at 0, 9 bits MSB first */
+			data(0x0);
+			data((height-1) & 0xFF); /* End at 296 */
+			data((height-1) >> 8);
+
+			/* Border Waveform Control*/
+			command(0x3C);
+			data(0xC0); /* POR values because idk what is going on */
+
 		}
 		/* Might not be so good to expose command and data to the user?*/
 		void command(const BYTE command) {
@@ -68,4 +100,18 @@ class SSD1680 {
 	private:
 		/* CLK, MOSI, CS, DC reset, busy, MISO*/
 		uint8_t scl, sda, cs, dc, rst, bsy, miso;
+
+		void waitBusy(uint32_t timeout = 10000) {
+        	uint32_t start = millis();
+
+        	// SSD1680 BUSY is normally active LOW.
+        	while (digitalRead(_busy) == LOW) {
+        	    if (millis() - start > timeout) {
+        	        break;
+        	    }
+        	delay(1);
+        }
+    }
+
+
 };
