@@ -65,6 +65,7 @@ class SSD1680 {
 			command(0x3C);
 			data(0xC0); /* POR values because idk what is going on */
 
+			waitBusy();
 		}
 		/* Might not be so good to expose command and data to the user?*/
 		void command(const BYTE command) {
