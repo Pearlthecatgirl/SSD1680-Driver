@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 /* Design: Expect multiple eink screens
+ * TODO: add some kind of fail logging maybe?
  * */
 #define SPI_MAX_W_SPEED 20000000
 #define SPI_DATA_ORDER	MSBFIRST
@@ -105,6 +106,7 @@ class SSD1680 {
 	private:
 		uint8_t scl, sda, res, dc, cs, busy, miso; 
 		uint32_t width, height;
+		uint8_t *framebuffer;
 		bool hwReset(void) {
 			digitalWrite(res, HIGH);
 			delay(20);
@@ -113,7 +115,6 @@ class SSD1680 {
 			digitalWrite(res, HIGH);
 			delay(20);
 			if (!waitBusy()) {
-				/*TODO: add some fail logging*/
 				return false;
 			}
 			return true;
