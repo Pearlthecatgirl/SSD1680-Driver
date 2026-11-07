@@ -108,18 +108,6 @@ class SSD1680 {
 			WAIT_FAILURE("refresh", 5);
 			return true;
 		}
-		void command(uint8_t cmd) {
-			digitalWrite(dc, LOW);
-			digitalWrite(cs, LOW);
-			SPI.transfer(cmd);
-			digitalWrite(cs, HIGH);
-		}
-		void data(uint8_t dat) {
-			digitalWrite(dc, HIGH);
-			digitalWrite(cs, LOW);
-			SPI.transfer(dat);
-			digitalWrite(cs, HIGH);
-		}
 		bool waitBusy(uint32_t wait=10000) {
 			uint32_t start=millis();
 			/* BUSY is active LOW */
@@ -167,6 +155,19 @@ class SSD1680 {
 		void swreset(void) {
 			command(0x12);
 		}
+		void command(uint8_t cmd) {
+			digitalWrite(dc, LOW);
+			digitalWrite(cs, LOW);
+			SPI.transfer(cmd);
+			digitalWrite(cs, HIGH);
+		}
+		void data(uint8_t dat) {
+			digitalWrite(dc, HIGH);
+			digitalWrite(cs, LOW);
+			SPI.transfer(dat);
+			digitalWrite(cs, HIGH);
+		}
+
 		/* Need 16 bit enforcement otherwise int overflow possible. */
 		void setRamBoundary(uint16_t wdth, uint16_t hght) {
 			/* Screen boundaries */
