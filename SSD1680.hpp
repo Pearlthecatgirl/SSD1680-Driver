@@ -37,7 +37,6 @@ class SSD1680 {
 			pinMode(res, OUTPUT);
 			pinMode(busy, INPUT);
 
-			digitalWrite(cs, HIGH);
 			digitalWrite(cs, LOW);
 
 			Serial.begin(115200);
@@ -64,7 +63,7 @@ class SSD1680 {
 			data(0x00); /* Gate scanning sequence/direction */
 
 			command(0x11); /* X/Y RAM entry direction */
-			data(0x00); /* X,Y both increment*/
+			data(0x03); /* X,Y both increment*/
 
 			setRamBoundary(width, height);
 
@@ -81,8 +80,49 @@ class SSD1680 {
 			command(0x20);
 
 			WAIT_FAILURE("LUT setting", 5);
+
+			/* Moved voltage booster init
+			 * from stage 5 to stage 4 as part of init.
+			 * */
 			
 			return true;
+		}
+		void command(uint8_t cmd) {
+			digitalWrite(dc, LOW);
+			digitalWrite(cs, LOW);
+			SPI.transfer(cmd);
+			digitalWrite(cs, HIGH);
+		}
+		void data(uint8_t dat) {
+			digitalWrite(dc, HIGH);
+			digitalWrite(cs, LOW);
+			SPI.transfer(dat);
+			digitalWrite(cs, HIGH);
+		}
+		bool waitBusy(uint32_t wait=10000) {
+			uint32_t start=millis();
+			/* BUSY is active LOW */
+			while (digitalRead(busy)==HIGH) {
+				if (millis()-start>wait) return false;
+				delay(100);
+			}
+			return true;
+		}
+		void end(void) {
+			command(0x10);
+			data(0x00);
+
+			SPI.endTransaction();
+			SPI.end();
+		}
+		/* x must be uint8, but y can be uint16, 9 bit */
+		void setRamStartAddr(uint16_t x, uint16_t y) {
+			command(0x4E); /* Set x, y start position x.. width*/
+			data(x);
+
+			command(0x4F); /* Set x, y start position y.. height*/
+			data(y & 0xff);
+			data(y >> 8);
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
@@ -98,29 +138,17 @@ class SSD1680 {
 			 * just wait a conservative amount..
 			 * */
 			digitalWrite(res, HIGH);
-			delay(10);
+			delay(100);
 			digitalWrite(res, LOW);
-			delay(10);
+			delay(20);
 			digitalWrite(res, HIGH);
-			delay(10);
+			delay(5000);
 		}
 		void swreset(void) {
 			command(0x12);
 		}
-		void command(uint8_t cmd) {
-			digitalWrite(dc, LOW);
-			digitalWrite(cs, LOW);
-			SPI.transfer(cmd);
-			digitalWrite(cs, HIGH);
-		}
-		void data(uint8_t dat) {
-			digitalWrite(dc, HIGH);
-			digitalWrite(cs, LOW);
-			SPI.transfer(dat);
-			digitalWrite(cs, HIGH);
-		}
 		/* Need 16 bit enforcement otherwise int overflow possible. */
-		void setRamBoundary(uint16_t wdth, uint16_t, hght) {
+		void setRamBoundary(uint16_t wdth, uint16_t hght) {
 			/* Screen boundaries */
 			command(0x44); /*x ~ width */
 			data(0x00);
@@ -131,13 +159,5 @@ class SSD1680 {
 			data((hght-1) & 0xff); /* 8 lower bits, 0 indexed */
 			data((hght-1) >> 8); /* Most significant bit, 0 indexed */
 		}
-		bool waitBusy(uint32_t wait=10000) {
-			uint32_t start=millis();
-			/* BUSY is active LOW */
-			while (digitalRead(busy)==HIGH) {
-				if (millis()-start>wait) return false;
-				delay(100);
-			}
-			return true;
-		}
+
 };
