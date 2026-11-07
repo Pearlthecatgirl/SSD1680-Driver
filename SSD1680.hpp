@@ -24,7 +24,6 @@
 
 class SSD1680 {
 	public:
-		uint8_t *fb;
 		SSD1680(uint8_t scl, uint8_t sda, uint8_t res, uint8_t dc, uint8_t cs, uint8_t busy, uint32_t width, uint32_t height):
 			scl(scl), sda(sda), res(res), dc(dc), cs(cs), busy(busy), width(width), height(height) {
 				fbsiz=height*(width/8); /* width is div by 8 because monochrome screen, consider bits instead */
@@ -102,7 +101,7 @@ class SSD1680 {
 			digitalWrite(cs, HIGH);
 		}
 		void pixel(uint16_t x, uint16_t y, uint8_t bool_value) {
-    		fb[y*width+(x>>3)]&=~(1<<x%8)|(val<<x%8);
+    		fb[y*width+(x>>3)]&=~(1<<x%8)|(bool_value<<x%8);
 		}
 		void clear(uint8_t bool_value) {
 			memset(fb, bool_value*0xff, fbsiz);
@@ -134,6 +133,7 @@ class SSD1680 {
 		/*TODO: rearrange to eliminate most padding */
 		static SSD1680 *active_displays;
 		static uint8_t active_displays_count; /* restrict to uint8 number of displays.. because who tf has that many screens bruh*/
+		uint8_t *fb;
 		uint32_t width, height, rst_counter;
 		uint8_t scl, sda, res, dc, cs, busy; 
 		size_t fbsiz;
