@@ -103,9 +103,6 @@ class SSD1680 {
 		}
 		void pixel(uint16_t x, uint16_t y, uint8_t bool_value) {
     		fb[y*(width>>3)+(x>>3)]&=~(1<<x%8)|(bool_value<<x%8);
-			fb[y*(width>>3)+(x>>3)]=flip_byte(fb[y*(width>>3)+(x>>3)]);
-			//for (int i=0;i<32;i++)
-			//fb[i]=bool_value;
 		}
 		void clear(uint8_t bool_value) {
 			memset(fb, bool_value*0xff, fbsiz);
@@ -153,6 +150,13 @@ class SSD1680 {
 			command(0x4F); /* Set x, y start position y.. height*/
 			data(y & 0xff);
 			data(y >> 8);
+		}
+		void chrA(uint16_t x, uint16_t y, uint8_t bool_value) {
+		
+		}
+		void bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
+				uint8_t bool_value, uint8_t *bm, size_t siz) {
+
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
@@ -218,9 +222,7 @@ class SSD1680 {
 			}
 			return true;
 		}
-		void writeChar(uint8_t chr) {
 		
-		}
 		uint8_t flip_byte(uint8_t byte) {
 			uint8_t LUT[]={
 				0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0, 
