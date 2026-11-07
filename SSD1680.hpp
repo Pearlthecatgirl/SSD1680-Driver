@@ -104,6 +104,9 @@ class SSD1680 {
 		void pixel(uint16_t x, uint16_t y, uint8_t bool_value) {
     		fb[y*width+(x>>3)]&=~(1<<x%8)|(val<<x%8);
 		}
+		void clear(uint8_t bool_value) {
+			memset(fb, bool_value*0xff, fbsiz);
+		}
 		bool refresh(void) {
 			command(0x22);
 			data(0xC7);
