@@ -9,6 +9,9 @@
 #define SPI_DATA_ORDER	MSBFIRST
 #define SPI_DATAMODE	SPI_MODE0
 
+#define BLACK 0
+#define WHITE 1
+
 #define WAIT_FAILURE(WAITER, WAITMAX)  \
 	do { \
 			while (!waitBusy()) { \
