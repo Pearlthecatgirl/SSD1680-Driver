@@ -112,7 +112,7 @@ class SSD1680 {
 		}
 		bool refresh(void) {
 			command(0x22);
-			data(0xB1); /* Mode 1 seems to work. TODO: Sync this up with the display modes */
+			data(0xB1); /* Mode 1 seems to work.*/
 			command(0x20);
 
 			WAIT_FAILURE("LUT setting", 5);
@@ -123,6 +123,7 @@ class SSD1680 {
 			WAIT_FAILURE("refresh", 5);
 			return true;
 		}
+		/* TODO: FIX partial refresh*/
 		/* Partial refresh -> BROKEN! do not use */
 		bool refreshPartial(void) {
 			command(0x22);
@@ -216,6 +217,9 @@ class SSD1680 {
 				delay(100);
 			}
 			return true;
+		}
+		void writeChar(uint8_t chr) {
+		
 		}
 		uint8_t flip_byte(uint8_t byte) {
 			uint8_t LUT[]={
