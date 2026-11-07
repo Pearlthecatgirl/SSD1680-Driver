@@ -101,20 +101,14 @@ class SSD1680 {
 			SPI.writeBytes(fb, (width*height)/8);
 			digitalWrite(cs, HIGH);
 		}
+		void pixel(uint16_t x, uint16_t y, uint8_t bool_value) {
+    		fb[y*width+(x>>3)]&=~(1<<x%8)|(val<<x%8);
+		}
 		bool refresh(void) {
 			command(0x22);
 			data(0xC7);
 			command(0x20);
 			WAIT_FAILURE("refresh", 5);
-			return true;
-		}
-		bool waitBusy(uint32_t wait=10000) {
-			uint32_t start=millis();
-			/* BUSY is active LOW */
-			while (digitalRead(busy)==HIGH) {
-				if (millis()-start>wait) return false;
-				delay(100);
-			}
 			return true;
 		}
 		void end(void) {
@@ -161,13 +155,20 @@ class SSD1680 {
 			SPI.transfer(cmd);
 			digitalWrite(cs, HIGH);
 		}
+		/* Not memory safe! */
+		void data(uint8_t *dat, size_t siz) {
+			int i;
+			digitalWrite(dc, HIGH);
+			digitalWrite(cs, LOW);
+			for (i=0;i<siz;i++) SPI.transfer(dat[i]);
+			digitalWrite(cs, HIGH);
+		}
 		void data(uint8_t dat) {
 			digitalWrite(dc, HIGH);
 			digitalWrite(cs, LOW);
 			SPI.transfer(dat);
 			digitalWrite(cs, HIGH);
 		}
-
 		/* Need 16 bit enforcement otherwise int overflow possible. */
 		void setRamBoundary(uint16_t wdth, uint16_t hght) {
 			/* Screen boundaries */
@@ -180,5 +181,13 @@ class SSD1680 {
 			data((hght-1) & 0xff); /* 8 lower bits, 0 indexed */
 			data((hght-1) >> 8); /* Most significant bit, 0 indexed */
 		}
-
+		bool waitBusy(uint32_t wait=10000) {
+			uint32_t start=millis();
+			/* BUSY is active LOW */
+			while (digitalRead(busy)==HIGH) {
+				if (millis()-start>wait) return false;
+				delay(100);
+			}
+			return true;
+		}
 };
