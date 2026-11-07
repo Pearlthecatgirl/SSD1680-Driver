@@ -1,118 +1,143 @@
-/* Depends on base arduino libraries. Made for ESP32-S3 (tested on lilygo t-display-s3)*/
 #include <Arduino.h>
 #include <SPI.h>
 #include <stdint.h>
 
+/* Require that all screens have the same setting.
+ * Otherwise we might have refresh issues
+ * */
 #define SPI_MAX_W_SPEED 20000000
 #define SPI_DATA_ORDER	MSBFIRST
 #define SPI_DATAMODE	SPI_MODE0
 
-#define BYTE uint8_t
-#define SWRESET 0x12
+#define WAIT_FAILURE(WAITER, WAITMAX)  \
+	do { \
+			while (!waitBusy()) { \
+				if (rst_counter>5) { \
+					Serial.printf("%s wait exceeded %d times. Failing", WAITER, WAITMAX); \
+					return false; \
+				}  \
+				Serial.printf("%s wait exceeded, retrying: tried %d times.", WAITER, rst_counter); \
+				rst_counter++; \
+			} \
+			rst_counter=0; \
+	}while(0)
 
 class SSD1680 {
 	public:
-		SSD1680(uint8_t scl, uint8_t sda, uint8_t cs, uint8_t dc, uint8_t rst, uint8_t bsy, uint8_t miso
-				int width, int height) {
-			scl=scl; /* SPI */
-			sda=sda; /* SPI */
-			cs=cs; /* SPI */
-			dc=dc; /* OUTPUT */
-			rst=rst; /* OUTPUT */
-			bsy=bsy; /* INPUT */
-			miso=miso; /* SPI (this is unused) */
-			width=width;
-			height=height;
+		SSD1680(uint8_t scl, uint8_t sda, uint8_t res, uint8_t dc, uint8_t cs, uint8_t busy, uint32_t width, uint32_t height):
+			scl(scl), sda(sda), res(res), dc(dc), cs(cs), busy(busy), width(width), height(height) {
+				fbsiz=height*(width/8); /* width is div by 8 because monochrome screen, consider bits instead */
+				fb=(uint8_t *)malloc(sizeof(uint8_t)*fbsiz);
+			}
+		bool begin(void) {
+			uint32_t rst_counter=0;
 
+			pinMode(cs, OUTPUT);
 			pinMode(dc, OUTPUT);
-			pinMode(rst, OUTPUT);
-			pinMode(bsy, INPUT);
-		}
-		void begin(void) {
-			delay(10); /* force delay 10 ms*/
-			SPI.begin(scl, miso, sda, cs);
-			SPI.beginTransaction(SPI_MAX_W_SPEED, SPI_DATA_ORDER, SPI_DATAMODE);
+			pinMode(res, OUTPUT);
+			pinMode(busy, INPUT);
 
-			/* Refer to the operation flow section of SSD1680 manual*/
-			digitalWrite(rst, HIGH);
-			command(0x12); /*SW reset */
-			delay(10); /* force delay 10 ms*/
+			digitalWrite(cs, HIGH);
+			digitalWrite(cs, LOW);
 
-			/* 3. Init Code */
-			command(0x01); /* Gate driver output */
-			/* Init All lines, aka 295 */
-			data((height-1) & 0xFF); /* A[7:0] */
-			data((height-1) >> 8); /* 0..A8 */
-			data(0x0); /* Use POR value*/
+			Serial.begin(115200);
 
-			command(0x11);
-			data(0x3); /* A2 -> direction, default X*/
-						/* TODO: Orientation of screen ?*/
+			/* Refer to the manual, page 39, Section 9.1
+			 * "General Operation Flow to drive display panel"
+			 *  */
 
-			/* Ram X Bounds*/
-			command(0x44);
-			data(0x0); /* Start at 0 */
-			data((height>>3)-1); /* group by 8, divide by 8, same as bitshift 3*/
+			/* 2. Set Initial Configuration */
+			SPI.begin(scl, -1, sda, cs); /* No miso line, data should be sent back via SDA? fake spi and all */
+			SPI.beginTransaction(SPISettings(SPI_MAX_W_SPEED, SPI_DATA_ORDER, SPI_DATAMODE));
+			delay(10);
 
-			/* Ram Y Bounds*/
-			command(0x45);
-			data(0x0); /* Start at 0, 9 bits MSB first */
-			data(0x0);
-			data((height-1) & 0xFF); /* End at 296 */
-			data((height-1) >> 8);
+			hwreset();
 
-			/* Border Waveform Control*/
+			swreset();
+
+			WAIT_FAILURE("swreset", 5);
+
+			/* 3. Send Initialization Code */
+			command(0x01); /*HEIGHT gate init */
+			data((height-1) & 0xff); /* lower 8 bits*/
+			data((height-1) >> 8); /* MSB */
+			data(0x00); /* Gate scanning sequence/direction */
+
+			command(0x11); /* X/Y RAM entry direction */
+			data(0x00); /* X,Y both increment*/
+
+			setRamBoundary(width, height);
+
+			/* Panel border */
 			command(0x3C);
-			data(0xC0); /* POR values because idk what is going on */
+			data(0x05); /* for some reason, 0x05 works */
 
-			waitBusy();
+			/* 4. Load Waveform LUT */
+			command(0x18);
+			data(0x80); /* Use internal temperature sensor */
+
+			command(0x22);
+			data(0xB1); /* Mode 1 seems to work. TODO: Sync this up with the display modes */
+			command(0x20);
+
+			WAIT_FAILURE("LUT setting", 5);
+			
+			return true;
 		}
-		/* Might not be so good to expose command and data to the user?*/
-		void command(const BYTE command) {
-			digitalWrite(this->SPI_DC(), LOW);
-			digitalWrite(this->SPI_CS(), LOW);
-			SPI.transfer(command);
-			digitalWrite(this->SPI_CS(), HIGH);
-		}
-		void data(const BYTE data) {
-			digitalWrite(this->SPI_DC(), HIGH);
-			digitalWrite(this->SPI_CS(), LOW);
-			SPI.transfer(data);
-			digitalWrite(this->SPI_CS(), HIGH);
-		}
-		void end(void) {
-			SPI.end();	
-		}
-		/* Just some oop bs*/
-		uint8_t SPI_SCL(void) {return scl;}
-		void SPI_SCL(uint8_t SCL) {scl=SCL;}
-		uint8_t SPI_SDA(void) {return sda;}
-		void SPI_SDA(uint8_t SDA) {sda=SDA;}
-		uint8_t SPI_CS(void) {return cs;}
-		void SPI_CS(uint8_t CS) {cs=CS;}
-		uint8_t SPI_DC(void) {return dc;}
-		void SPI_DC(uint8_t DC) {dc=DC;}
-		uint8_t SPI_RST(void) {return rst;}
-		void SPI_RST(uint8_t RST) {rst=RST;}
-		uint8_t SPI_BSY(void) {return bsy;}
-		void SPI_BSY(uint8_t BSY) {bsy=BSY;}
-		uint8_t SPI_MISO(void) {return miso;}
-		void SPI_MISO(uint8_t MISO) {miso=MISO;}
 	private:
-		/* CLK, MOSI, CS, DC reset, busy, MISO*/
-		uint8_t scl, sda, cs, dc, rst, bsy, miso;
-
-		void waitBusy(uint32_t timeout = 10000) {
-        	uint32_t start = millis();
-
-        	// SSD1680 BUSY is normally active LOW.
-        	while (digitalRead(_busy) == LOW) {
-        	    if (millis() - start > timeout) {
-        	        break;
-        	    }
-        	delay(1);
-        }
-    }
-
-
+		/*TODO: rearrange to eliminate most padding */
+		static SSD1680 *active_displays;
+		static uint8_t active_displays_count; /* restrict to uint8 number of displays.. because who tf has that many screens bruh*/
+		uint32_t width, height;
+		uint8_t scl, sda, res, dc, cs, busy; 
+		uint8_t *fb;
+		size_t fbsiz;
+		void hwreset(void) {
+			/* This shouldn't touch the busy pin..?
+			 * The manual says nothing about this touching that pin
+			 * just wait a conservative amount..
+			 * */
+			digitalWrite(res, HIGH);
+			delay(10);
+			digitalWrite(res, LOW);
+			delay(10);
+			digitalWrite(res, HIGH);
+			delay(10);
+		}
+		void swreset(void) {
+			command(0x12);
+		}
+		void command(uint8_t cmd) {
+			digitalWrite(dc, LOW);
+			digitalWrite(cs, LOW);
+			SPI.transfer(cmd);
+			digitalWrite(cs, HIGH);
+		}
+		void data(uint8_t dat) {
+			digitalWrite(dc, HIGH);
+			digitalWrite(cs, LOW);
+			SPI.transfer(dat);
+			digitalWrite(cs, HIGH);
+		}
+		/* Need 16 bit enforcement otherwise int overflow possible. */
+		void setRamBoundary(uint16_t wdth, uint16_t, hght) {
+			/* Screen boundaries */
+			command(0x44); /*x ~ width */
+			data(0x00);
+			data((wdth/8)-1);
+			command(0x45); /*y ~ height */
+			data(0x00);
+			data(0x00);
+			data((hght-1) & 0xff); /* 8 lower bits, 0 indexed */
+			data((hght-1) >> 8); /* Most significant bit, 0 indexed */
+		}
+		bool waitBusy(uint32_t wait=10000) {
+			uint32_t start=millis();
+			/* BUSY is active LOW */
+			while (digitalRead(busy)==HIGH) {
+				if (millis()-start>wait) return false;
+				delay(100);
+			}
+			return true;
+		}
 };
