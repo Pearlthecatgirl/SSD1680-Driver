@@ -78,11 +78,9 @@ class SSD1680 {
 			command(0x18);
 			data(0x80); /* Use internal temperature sensor */
 
-			command(0x22);
-			data(0xB1); /* Mode 1 seems to work. TODO: Sync this up with the display modes */
-			command(0x20);
-
-			WAIT_FAILURE("LUT setting", 5);
+			if (!refresh()) {
+				Serial.printf("refresh failed!");
+			}
 
 			/* Moved voltage booster init
 			 * from stage 5 to stage 4 as part of init.
@@ -114,7 +112,27 @@ class SSD1680 {
 		}
 		bool refresh(void) {
 			command(0x22);
+			data(0xB1); /* Mode 1 seems to work. TODO: Sync this up with the display modes */
+			command(0x20);
+
+			WAIT_FAILURE("LUT setting", 5);
+
+			command(0x22);
 			data(0xC7);
+			command(0x20);
+			WAIT_FAILURE("refresh", 5);
+			return true;
+		}
+		/* Partial refresh -> BROKEN! do not use */
+		bool refreshPartial(void) {
+			command(0x22);
+			data(0xB9); 
+			command(0x20);
+
+			WAIT_FAILURE("LUT setting", 5);
+
+			command(0x22);
+			data(0xCF);
 			command(0x20);
 			WAIT_FAILURE("refresh", 5);
 			return true;
