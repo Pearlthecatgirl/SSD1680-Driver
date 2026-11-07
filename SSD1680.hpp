@@ -24,14 +24,15 @@
 
 class SSD1680 {
 	public:
+		uint8_t *fb;
 		SSD1680(uint8_t scl, uint8_t sda, uint8_t res, uint8_t dc, uint8_t cs, uint8_t busy, uint32_t width, uint32_t height):
 			scl(scl), sda(sda), res(res), dc(dc), cs(cs), busy(busy), width(width), height(height) {
 				fbsiz=height*(width/8); /* width is div by 8 because monochrome screen, consider bits instead */
 				fb=(uint8_t *)malloc(sizeof(uint8_t)*fbsiz);
 			}
 		bool begin(void) {
-			uint32_t rst_counter=0;
 
+			rst_counter=0;
 			pinMode(cs, OUTPUT);
 			pinMode(dc, OUTPUT);
 			pinMode(res, OUTPUT);
@@ -84,7 +85,27 @@ class SSD1680 {
 			/* Moved voltage booster init
 			 * from stage 5 to stage 4 as part of init.
 			 * */
-			
+			command(0x0C); /* POR values */
+			data(0x8B);
+			data(0x9C);
+			data(0x96);
+			data(0x0F);
+			return true;
+		}
+		void sendbuf(void) {
+			setRamStartAddr(0, 0);
+
+			command(0x24);
+			digitalWrite(dc, HIGH);
+			digitalWrite(cs, LOW);
+			SPI.writeBytes(fb, (width*height)/8);
+			digitalWrite(cs, HIGH);
+		}
+		bool refresh(void) {
+			command(0x22);
+			data(0xC7);
+			command(0x20);
+			WAIT_FAILURE("refresh", 5);
 			return true;
 		}
 		void command(uint8_t cmd) {
@@ -128,9 +149,8 @@ class SSD1680 {
 		/*TODO: rearrange to eliminate most padding */
 		static SSD1680 *active_displays;
 		static uint8_t active_displays_count; /* restrict to uint8 number of displays.. because who tf has that many screens bruh*/
-		uint32_t width, height;
+		uint32_t width, height, rst_counter;
 		uint8_t scl, sda, res, dc, cs, busy; 
-		uint8_t *fb;
 		size_t fbsiz;
 		void hwreset(void) {
 			/* This shouldn't touch the busy pin..?
