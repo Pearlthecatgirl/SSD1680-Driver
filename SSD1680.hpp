@@ -103,7 +103,7 @@ class SSD1680 {
 		}
 		void pixel(uint16_t x, uint16_t y, uint8_t bool_value) {
 			uint8_t tmpbuf=flip_byte(fb[y*(width>>3)+(x>>3)]);
-			tmpbuf&=~(1<<x%8)|(bool_value<<x%8);
+			tmpbuf^=~(1<<x%8)|(bool_value<<x%8);
 			fb[y*(width>>3)+(x>>3)]=flip_byte(tmpbuf);
 		}
 		void clear(uint8_t bool_value) {
@@ -154,13 +154,30 @@ class SSD1680 {
 			data(y >> 8);
 		}
 		void bitmap(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
-			uint16_t r, c, ox=x, oy=y;
+			uint16_t r, c;
 			uint8_t b;
 			for (r=0;r<h;r++) {
 				for (c=0;c<bytew;c++) {
 					/*current byte: bm[r*bytew+c]*/
 					for (b=0;b<8;b++) {
-						pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
+						/* Colour (C) and Bitness (B)
+						 * C(1) = WHITE, C(0) = BLACK
+						 * B(1) = HIGH,  B(0) = LOW
+						 * C B Output 
+						 * 0 0 1 : Low bit with black, is white
+						 * 0 1 0 : High bit with black is black
+						 * 1 0 0 : low bit with white is black
+						 * 1 1 1 : high bit with white is white
+						 * equiv to ~(C^B)
+						 * equiv to !C != !B
+						 *
+						 * */
+						if ((bool_value!=WHITE) != (((bm[r*bytew+c] & (0x80 >> b))>>(7-b))!=1)) {
+							pixel(x+b+(c*8), y+r, 1);
+						} else {
+							pixel(x+b+(c*8), y+r, 0);
+						}
+						// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 					}
 				}
 			}
@@ -229,7 +246,6 @@ class SSD1680 {
 			}
 			return true;
 		}
-
 		uint8_t flip_byte(uint8_t byte) {
 			uint8_t LUT[]={
 				0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0, 
