@@ -2,6 +2,8 @@
 #include <SPI.h>
 #include <stdint.h>
 
+#include "fonts.hpp"
+
 /* Require that all screens have the same setting.
  * Otherwise we might have refresh issues
  * */
@@ -176,6 +178,24 @@ class SSD1680 {
 							pixel(x+b+(c*8), y+r, 1);
 						} else {
 							pixel(x+b+(c*8), y+r, 0);
+						}
+						// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
+					}
+				}
+			}
+		}
+		void bitmap_ignoreLow(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
+			uint16_t r, c;
+			uint8_t b;
+			for (r=0;r<h;r++) {
+				for (c=0;c<bytew;c++) {
+					/*current byte: bm[r*bytew+c]*/
+					for (b=0;b<8;b++) {
+						/* Refer to above for logic
+						 * treat lowbit as ignore, high bit as write
+						 * */
+						if (((bm[r*bytew+c] & (0x80 >> b))>>(7-b))!=1) continue; /* ignore all low bits */
+						else pixel(x+b+(c*8), y+r, bool_value); /* High bits are the same as colour */
 						}
 						// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 					}
