@@ -151,12 +151,17 @@ class SSD1680 {
 			data(y & 0xff);
 			data(y >> 8);
 		}
-		void chrA(uint16_t x, uint16_t y, uint8_t bool_value) {
-		
-		}
-		void bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
-				uint8_t bool_value, uint8_t *bm, size_t siz) {
-
+		void bitmap(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm, size_t siz) {
+			uint16_t r, c, ox=x, oy=y;
+			uint8_t b;
+			for (r=0;r<h;r++) {
+				for (c=0;c<bytew;c++) {
+					/*current byte: bm[r*bytew+c]*/
+					for (b=0;b<8;b++) {
+						pixel(x+b+(c*bytew), y+r, ((flip_byte(bm[r*bytew+c]) & (0x80 >> b))>>(7-b)));
+					}
+				}
+			}
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
@@ -222,7 +227,7 @@ class SSD1680 {
 			}
 			return true;
 		}
-		
+
 		uint8_t flip_byte(uint8_t byte) {
 			uint8_t LUT[]={
 				0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0, 
