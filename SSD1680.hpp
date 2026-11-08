@@ -102,7 +102,9 @@ class SSD1680 {
 			digitalWrite(cs, HIGH);
 		}
 		void pixel(uint16_t x, uint16_t y, uint8_t bool_value) {
-    		fb[y*(width>>3)+(x>>3)]&=~(1<<x%8)|(bool_value<<x%8);
+			uint8_t tmpbuf=flip_byte(fb[y*(width>>3)+(x>>3)]);
+			tmpbuf&=~(1<<x%8)|(bool_value<<x%8);
+			fb[y*(width>>3)+(x>>3)]=flip_byte(tmpbuf);
 		}
 		void clear(uint8_t bool_value) {
 			memset(fb, bool_value*0xff, fbsiz);
@@ -151,14 +153,14 @@ class SSD1680 {
 			data(y & 0xff);
 			data(y >> 8);
 		}
-		void bitmap(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm, size_t siz) {
+		void bitmap(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
 			uint16_t r, c, ox=x, oy=y;
 			uint8_t b;
 			for (r=0;r<h;r++) {
 				for (c=0;c<bytew;c++) {
 					/*current byte: bm[r*bytew+c]*/
 					for (b=0;b<8;b++) {
-						pixel(x+b+(c*bytew), y+r, ((flip_byte(bm[r*bytew+c]) & (0x80 >> b))>>(7-b)));
+						pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 					}
 				}
 			}
