@@ -8,3 +8,5 @@ Edit the header file to change the SPI settings to be appropriate for your setup
 
 When running simply create a new instance of SSD1680 class, call begin() method.
 Remember to call end() method when finishing.
+
+This project is being abandoned for another driver.

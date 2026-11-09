@@ -196,11 +196,13 @@ class SSD1680 {
 						 * */
 						if (((bm[r*bytew+c] & (0x80 >> b))>>(7-b))!=1) continue; /* ignore all low bits */
 						else pixel(x+b+(c*8), y+r, bool_value); /* High bits are the same as colour */
-						}
-						// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 					}
+					// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 				}
 			}
+		}
+		void drawChar(uint16_t x, uint16_t y, char c) {
+
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
