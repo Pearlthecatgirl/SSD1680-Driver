@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "fonts.hpp"
 
@@ -175,9 +176,9 @@ class SSD1680 {
 						 *
 						 * */
 						if ((bool_value!=WHITE) != (((bm[r*bytew+c] & (0x80 >> b))>>(7-b))!=1)) {
-							pixel(x+b+(c*8), y+r, 1);
-						} else {
 							pixel(x+b+(c*8), y+r, 0);
+						} else {
+							pixel(x+b+(c*8), y+r, 1);
 						}
 						// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 					}
@@ -201,8 +202,42 @@ class SSD1680 {
 				}
 			}
 		}
+		/* Support 1 font for now.. */
 		void drawChar(uint16_t x, uint16_t y, char c) {
 			bitmap(x, y, 1, 8, BLACK, FONT_SEL(pearlbasic_8x8, c));
+		}
+		/* Support only 8x8 for now */
+		void print(uint16_t x, uint16_t y, char *string) {
+			char c;
+			uint16_t cx=x, cy=y, i;
+			while ((c=*(string+i++))!=0) {
+				if (cx>=width) {
+					cx=0;
+					cy+=8;
+				}
+				if (cy>=height) return; /* Ignore all else */
+				
+				if ((uint8_t)c<(uint8_t)' ') {
+					switch ((uint8_t)c) {
+						case (uint8_t)'\0':
+							return;
+						case (uint8_t)'\n':
+							cy+=8;
+							cx=0;
+							break;
+						case (uint8_t)'\t':
+							cx+=16;
+							break;
+						case (uint8_t)'\r':
+							cx=0;
+							break;
+						default: break;
+					}
+				} else if ((uint8_t)c<=(uint8_t)'~') {
+					drawChar(cx, cy, c);
+					cx+=8;
+				} else continue; /* ignore everything else for now */
+			}
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
