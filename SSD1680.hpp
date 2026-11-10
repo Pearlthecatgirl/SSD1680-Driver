@@ -201,6 +201,10 @@ class SSD1680 {
 					// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 				}
 			}
+			if (!printc_locked) {
+				printc_cx=cx;
+				printc_cy=cy;
+			}
 		}
 		/* Support 1 font for now.. */
 		void drawChar(uint16_t x, uint16_t y, char c) {
@@ -209,14 +213,24 @@ class SSD1680 {
 		/* c stands for continuous */
 		void print_c(char *string) {
 			printc_locked=1;
-			print(cx, cy, string);
+			print(printc_cx, printc_cy, string);
 			printc_locked=0;
 		}
 		void print_c(uint16_t x, uint16_t y, char *string) {
 			printc_cx=x;
 			printc_cy=y;
 			printc_locked=1;
-			print(cx, cy, string);
+			print(x, y, string);
+			printc_locked=0;
+		}
+		void bitmap_c(uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
+			printc_locked=1;
+			bitmap(printc_cx, printc_cy, bytew, h, bool_value, bm);
+			printc_locked=0;
+		}
+		void bitmap_c(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
+			printc_locked=1;
+			bitmap(x, y, bytew, h, bool_value, bm);
 			printc_locked=0;
 		}
 		/* Support only 8x8 for now */
