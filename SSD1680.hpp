@@ -208,6 +208,9 @@ class SSD1680 {
 		}
 		/* c stands for continuous */
 		void print_c(char *string) {
+			printc_locked=1;
+			print(cx, cy, string);
+			printc_locked=0;
 		}
 		void print_c(uint16_t x, uint16_t y, char *string) {
 			printc_cx=x;
