@@ -185,8 +185,8 @@ class SSD1680 {
 				}
 			}
 			if (!printc_locked) {
-				this->printc_cx=cx;
-				this->printc_cy=cy;
+				this->printc_cx=x+b+(c*8);
+				this->printc_cy=y+r;
 			}
 		}
 		void bitmap_ignoreLow(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
