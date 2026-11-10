@@ -206,6 +206,16 @@ class SSD1680 {
 		void drawChar(uint16_t x, uint16_t y, char c) {
 			bitmap(x, y, 1, 8, BLACK, FONT_SEL(pearlbasic_8x8, c));
 		}
+		/* c stands for continuous */
+		void print_c(char *string) {
+		}
+		void print_c(uint16_t x, uint16_t y, char *string) {
+			printc_cx=x;
+			printc_cy=y;
+			printc_locked=1;
+			print(cx, cy, string);
+			printc_locked=0;
+		}
 		/* Support only 8x8 for now */
 		void print(uint16_t x, uint16_t y, char *string) {
 			char c;
@@ -238,14 +248,20 @@ class SSD1680 {
 					cx+=8;
 				} else continue; /* ignore everything else for now */
 			}
+			/* Bad behaviour, but whatever, im lazy */
+			if (!printc_locked) {
+				printc_cx=cx;
+				printc_cy=cy;
+			}
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
 		static SSD1680 *active_displays;
 		static uint8_t active_displays_count; /* restrict to uint8 number of displays.. because who tf has that many screens bruh*/
+
 		uint8_t *fb;
-		uint32_t width, height, rst_counter;
-		uint8_t scl, sda, res, dc, cs, busy; 
+		uint32_t width, height, rst_counter, printc_cx, printc_cy;
+		uint8_t scl, sda, res, dc, cs, busy, printc_locked; 
 		size_t fbsiz;
 		void hwreset(void) {
 			/* This shouldn't touch the busy pin..?
@@ -257,7 +273,7 @@ class SSD1680 {
 			digitalWrite(res, LOW);
 			delay(20);
 			digitalWrite(res, HIGH);
-			delay(5000);
+			delay(100);
 		}
 		void swreset(void) {
 			command(0x12);
