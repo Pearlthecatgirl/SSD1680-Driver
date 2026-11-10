@@ -202,7 +202,7 @@ class SSD1680 {
 			}
 		}
 		void drawChar(uint16_t x, uint16_t y, char c) {
-
+			bitmap(x, y, 1, 8, BLACK, FONT_SEL(pearlbasic_8x8, c));
 		}
 	private:
 		/*TODO: rearrange to eliminate most padding */
