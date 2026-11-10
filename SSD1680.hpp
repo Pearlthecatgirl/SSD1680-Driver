@@ -184,6 +184,10 @@ class SSD1680 {
 					}
 				}
 			}
+			if (!printc_locked) {
+				this->printc_cx=cx;
+				this->printc_cy=cy;
+			}
 		}
 		void bitmap_ignoreLow(uint16_t x, uint16_t y, uint16_t bytew, uint16_t h, uint8_t bool_value, const uint8_t *bm) {
 			uint16_t r, c;
@@ -200,10 +204,6 @@ class SSD1680 {
 					}
 					// Old: pixel(x+b+(c*8), y+r, ((bm[r*bytew+c] & (0x80 >> b))>>(7-b)));
 				}
-			}
-			if (!printc_locked) {
-				printc_cx=cx;
-				printc_cy=cy;
 			}
 		}
 		/* Support 1 font for now.. */
@@ -267,8 +267,8 @@ class SSD1680 {
 			}
 			/* Bad behaviour, but whatever, im lazy */
 			if (!printc_locked) {
-				printc_cx=cx;
-				printc_cy=cy;
+				this->printc_cx=cx;
+				this->printc_cy=cy;
 			}
 		}
 	private:
